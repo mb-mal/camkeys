@@ -272,44 +272,17 @@ h2 {
   gap: 8px;
   padding: 18px 20px 0;
 }
-.layout-toggle {
+.layout-toggle,
+.layout-toggle:hover {
   position: absolute;
-  right: 12px;
-  bottom: 12px;
   z-index: 5;
-  width: 52px;
-  height: 52px;
+  border: 0;
   border-radius: 50%;
   padding: 0;
-  font-size: 16px;
-  font-weight: 700;
-  box-shadow: 0 6px 22px #14252235;
-  background: #245d46;
-  color: #fff;
-  border-color: #245d46;
-}
-.layout-toggle.holding::after {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  background: conic-gradient(#a8ffd0 calc(var(--hold, 0) * 1turn), #ffffff30 0);
-  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0);
-  pointer-events: none;
-}
-.layout-toggle::before {
-  content: "2 с";
-  position: absolute;
-  bottom: 3px;
-  left: 0;
-  right: 0;
-  font-size: 9px;
-  font-weight: 400;
-}
-.layout-toggle:hover {
-  background: #1b4836;
-  border-color: #1b4836;
-  color: #fff;
+  background: transparent;
+  color: transparent;
+  box-shadow: none;
+  transition: none;
 }
 
 .status {

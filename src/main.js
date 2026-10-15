@@ -20,7 +20,7 @@ import { acquireCameraStream, waitForVideoFrame } from "./camera.js";
 import { displayCorners } from "./scene.js";
 import { CalibrationController } from "./calibration-ui.js";
 import { InputSession } from "./input-session.js";
-import { StageControl } from "./stage-control.js";
+import { StageControl, layoutKey, layoutKeyOutline } from "./stage-control.js";
 import { WordOverlay } from "./word-overlay.js";
 import { PrefixDecoder, PrefixConsensus } from "./prefix-decoder.js";
 import { removeKnownSample, SAMPLE_CLEANUP_REQUEST } from "./sample-cleanup.js";
@@ -851,6 +851,15 @@ function recognizeCamera(token) {
 }
 
 function draw() {
+  const outline = layoutKeyOutline(state.forward);
+  const left = Math.min(...outline.map((p) => p.x));
+  const top = Math.min(...outline.map((p) => p.y));
+  Object.assign($("layout-toggle").style, {
+    left: `${left * 100}%`,
+    top: `${top * 100}%`,
+    width: `${(Math.max(...outline.map((p) => p.x)) - left) * 100}%`,
+    height: `${(Math.max(...outline.map((p) => p.y)) - top) * 100}%`,
+  });
   $("stage").style.setProperty(
     "--keyboard-top",
     `${Math.min(...state.visualCorners.map(([, y]) => y)) * 100}%`,
@@ -899,21 +908,22 @@ function processTrackedHands(hands, time, aspect) {
     state.calibrating,
   );
   if (state.source === "camera") {
-    const stage = $("stage").getBoundingClientRect();
-    const button = $("layout-toggle").getBoundingClientRect();
     const control = layoutHold.update({
-      tips: result.rawTips,
-      observed: result.activityTips,
+      tips: result.tips.length
+        ? result.tips
+        : result.rawTips.map((p) => ({
+            ...p,
+            ...project(state.inverse, p.x, p.y),
+          })),
+      observed: result.activityTips.map((p) => ({
+        ...p,
+        ...project(state.inverse, p.x, p.y),
+      })),
       owner: cameraInput.owner,
       time,
-      bounds: {
-        x: (button.x + button.width / 2 - stage.x) / stage.width,
-        y: (button.y + button.height / 2 - stage.y) / stage.height,
-        rx: button.width / 2 / stage.width,
-        ry: button.height / 2 / stage.height,
-      },
+      bounds: layoutKey,
     });
-    $("layout-toggle").style.setProperty("--hold", control.progress);
+    state.layoutControl = control;
     $("layout-toggle").classList.toggle("holding", control.busy);
     if (control.busy) {
       cameraInput.suspendControl(time);
@@ -928,7 +938,17 @@ function processTrackedHands(hands, time, aspect) {
         cameraInput.suspendControl(time);
       }
       state.hands = result.hands;
-      state.tips = [];
+      const controlTip = result.rawTips.find((p) => p.id === layoutHold.id);
+      state.tips = controlTip
+        ? [
+            {
+              ...controlTip,
+              ...project(state.inverse, controlTip.x, controlTip.y),
+            },
+          ]
+        : [];
+      state.active = layoutHold.id;
+      state.activityTip = null;
       $("tracking").textContent =
         control.progress >= 1
           ? "Раскладка переключена · уберите палец с кнопки"
@@ -1056,7 +1076,7 @@ function resetGesture(resetActivity = true) {
 }
 function stop(silent = false) {
   layoutHold.reset();
-  $("layout-toggle").style.setProperty("--hold", 0);
+  state.layoutControl = null;
   $("layout-toggle").classList.remove("holding");
   cameraGeneration++;
   starting = false;

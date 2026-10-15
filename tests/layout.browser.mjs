@@ -51,7 +51,7 @@ try {
   await page.waitForFunction(
     () =>
       getComputedStyle(document.getElementById("layout-toggle"))
-        .backgroundColor === "rgb(27, 72, 54)",
+        .backgroundColor === "rgba(0, 0, 0, 0)",
   );
   await page.locator("#overlay").scrollIntoViewIfNeeded();
   const box = await page.locator("#overlay").boundingBox();
@@ -118,16 +118,23 @@ try {
     const toggle = await page.locator("#layout-toggle").boundingBox();
     const stage = await page.locator("#stage").boundingBox();
     assert.ok(
-      Math.abs(toggle.width - toggle.height) < 1,
-      "language button is circular",
+      toggle.x > stage.x + stage.width * 0.8,
+      "control is at the keyboard right edge",
     );
     assert.ok(
-      Math.abs(stage.x + stage.width - toggle.x - toggle.width - 12) < 2,
-      "language button stays at the camera right edge",
+      toggle.y > stage.y + stage.height * 0.65,
+      "control is at the keyboard bottom row",
     );
     assert.ok(
-      Math.abs(stage.y + stage.height - toggle.y - toggle.height - 12) < 2,
-      "language button stays at the camera bottom edge",
+      toggle.x + toggle.width < stage.x + stage.width &&
+        toggle.y + toggle.height < stage.y + stage.height,
+      "control remains inside camera frame",
+    );
+    assert.equal(
+      await page
+        .locator("#layout-toggle")
+        .evaluate((el) => getComputedStyle(el).backgroundColor),
+      "rgba(0, 0, 0, 0)",
     );
     assert.equal(
       await page.evaluate(

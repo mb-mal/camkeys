@@ -1,5 +1,6 @@
 import { keys, project } from "./core.js";
 import { sceneProject, sceneTip } from "./scene.js";
+import { layoutKey, layoutKeyOutline } from "./stage-control.js";
 const colors = ["#97edb5", "#64dac9", "#f0cb77", "#c4bdf0", "#e7a5be"];
 export function drawWorkspace(canvas, scene, state) {
   const ctx = canvas.getContext("2d"),
@@ -55,6 +56,35 @@ export function drawWorkspace(canvas, scene, state) {
     ctx.textBaseline = "middle";
     ctx.fillText(k.letter.toUpperCase(), x, y);
   }
+  const control = state.layoutControl || {};
+  const outline = layoutKeyOutline(state.forward);
+  ctx.beginPath();
+  outline.forEach((p, i) =>
+    i ? ctx.lineTo(p.x * w, p.y * h) : ctx.moveTo(p.x * w, p.y * h),
+  );
+  ctx.closePath();
+  ctx.fillStyle = control.busy ? "#9ddcafb0" : "#cedbd51a";
+  ctx.fill();
+  ctx.strokeStyle = control.busy ? "#a5efc4" : "#abc7ba55";
+  ctx.stroke();
+  if (control.progress > 0) {
+    ctx.beginPath();
+    outline
+      .slice(0, Math.max(2, Math.ceil(control.progress * 48) + 1))
+      .forEach((p, i) =>
+        i ? ctx.lineTo(p.x * w, p.y * h) : ctx.moveTo(p.x * w, p.y * h),
+      );
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#a5efc4";
+    ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+  const [controlX, controlY] = screen(layoutKey.x, layoutKey.y);
+  ctx.fillStyle = control.busy ? "#142522" : "#d1ded7";
+  ctx.font = "13px Segoe UI";
+  ctx.fillText(state.lang.toUpperCase(), controlX, controlY - 3);
+  ctx.font = "8px Segoe UI";
+  ctx.fillText("2 с", controlX, controlY + 9);
   state.visualCorners.forEach(([x, y]) => {
     ctx.strokeStyle = "#79b992";
     ctx.strokeRect(x * w - 5, y * h - 5, 10, 10);

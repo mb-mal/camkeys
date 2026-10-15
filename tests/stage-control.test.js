@@ -1,16 +1,76 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { StageControl } from "../src/stage-control.js";
+import {
+  StageControl,
+  layoutKey,
+  layoutKeyOutline,
+} from "../src/stage-control.js";
+import { Dwell } from "../src/dwell.js";
+import { keys, homography, project } from "../src/core.js";
+import { displayCorners } from "../src/scene.js";
 import { InputSession } from "../src/input-session.js";
 const bounds = { x: 0.9, y: 0.9, rx: 0.04, ry: 0.07 };
 const tip = (x = 0.9, id = "hand1-1") => ({ id, x, y: 0.9, pointing: true });
-test("camera button uses screen coordinates, holds 2 seconds, and rearms only on exit", () => {
+test("layout key stays in the calibrated plane and clear of letter hit areas", () => {
+  const unit = [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, 1],
+  ];
+  const forward = homography(unit, displayCorners());
+  const outline = layoutKeyOutline(forward);
+  assert.ok(outline.every((p) => p.x > 0 && p.x < 1 && p.y > 0 && p.y < 0.8));
+  const camera = project(
+    homography(unit, [
+      [0.06, 0.38],
+      [0.94, 0.38],
+      [0.94, 0.9],
+      [0.06, 0.9],
+    ]),
+    layoutKey.x,
+    layoutKey.y,
+  );
+  assert.ok(
+    camera.x < 0.94 && camera.y < 0.9,
+    "button is reachable before the physical calibration edge",
+  );
+  for (const lang of ["ru", "en"])
+    assert.ok(
+      keys(lang).every(
+        (k) =>
+          Math.abs(k.x - layoutKey.x) > 0.037 + layoutKey.rx ||
+          Math.abs(k.y - layoutKey.y) > 0.125 + layoutKey.ry,
+      ),
+    );
+});
+test("the active digit uses the same dwell engine as letter keys and far observations cannot press", () => {
+  const c = new StageControl();
+  assert.ok(c.dwell instanceof Dwell);
+  const p = tip(0.9, "hand1-2");
+  for (let time = 0; time < 2000; time += 100)
+    assert.equal(
+      c.update({ tips: [p], owner: p.id, bounds, time }).fired,
+      false,
+    );
+  assert.equal(
+    c.update({ tips: [p], owner: p.id, bounds, time: 2000 }).fired,
+    true,
+  );
+  c.reset();
+  for (let time = 0; time < 2500; time += 100)
+    assert.equal(
+      c.update({ tips: [], observed: [p], owner: p.id, bounds, time }).fired,
+      false,
+    );
+});
+test("camera button uses calibrated keyboard coordinates, holds 2 seconds, and rearms only on exit", () => {
   const c = new StageControl();
   const update = (time, p = tip()) => c.update({ tips: [p], bounds, time });
   assert.equal(update(0).fired, false);
   for (let t = 100; t < 2000; t += 100) assert.equal(update(t).fired, false);
   assert.equal(
-    update(2000, { ...tip(), x: 12, y: -4, cameraX: 0.9, cameraY: 0.9 }).fired,
+    update(2000, { ...tip(), cameraX: 0.1, cameraY: 0.2 }).fired,
     true,
   );
   for (let t = 2100; t < 10000; t += 100) assert.equal(update(t).fired, false);
@@ -30,7 +90,7 @@ test("brief passes, folded fingers, another hand, and gaps cannot activate the b
   assert.equal(update(200, [{ ...tip(), pointing: false }]).busy, false);
   update(300, [tip()]);
   update(1200, [tip()]);
-  assert.equal(update(1300, [tip()]).progress, 0.05);
+  assert.equal(update(1300, [tip()]).progress, 0);
   update(1400, [], [tip(0.7)]);
   assert.equal(update(1500, [tip()]).progress, 0);
 });

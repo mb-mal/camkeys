@@ -1,6 +1,8 @@
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
 import { depthDemoHands } from "../src/depth-demo.js";
+import { homography, project } from "../src/core.js";
+import { displayCorners } from "../src/scene.js";
 import { pointStraight } from "./hand-fixture.js";
 const browser = await chromium.launch({ channel: "msedge", headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
@@ -35,7 +37,7 @@ await page.route("**/tracking.worker.js", (r) =>
  let point={x:.5,y:.5},lost=false;
  new BroadcastChannel('stage-button').onmessage=({data})=>{if('lost'in data)lost=data.lost;if('x'in data)point=data;};
  onmessage=({data})=>{if(data.type==='init'){postMessage({type:'ready'});return;}
- const hand=base.map(q=>({...q,x:q.x+point.x-.03-base[5].x,y:q.y+point.y+.02-base[5].y}));straight(hand,1,{...point,z:-.1});data.bitmap.close();
+ const hand=base.map(q=>({...q,x:q.x+point.x-.03-base[5].x,y:point.y-.08-(q.y-base[5].y)}));straight(hand,1,{...point,z:-.1});data.bitmap.close();
  setTimeout(()=>postMessage({type:'result',time:data.time,inferenceMs:0,result:{landmarks:lost?[]:[hand.map(q=>({...q,x:1-q.x}))]}}),40);};
 `,
   }),
@@ -55,7 +57,7 @@ try {
       document.getElementById("source-badge").textContent === "Живая камера",
   );
   await page.locator("#stage").scrollIntoViewIfNeeded();
-  const point = await page.evaluate(() => {
+  const screenPoint = await page.evaluate(() => {
     const s = document.getElementById("stage").getBoundingClientRect(),
       b = document.getElementById("layout-toggle").getBoundingClientRect();
     return {
@@ -63,9 +65,33 @@ try {
       y: (b.y + b.height / 2 - s.y) / s.height,
     };
   });
+  const unit = [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, 1],
+  ];
+  const keyboardPoint = project(
+    homography(displayCorners(), unit),
+    screenPoint.x,
+    screenPoint.y,
+  );
+  const point = project(
+    homography(unit, [
+      [0.06, 0.38],
+      [0.94, 0.38],
+      [0.94, 0.9],
+      [0.06, 0.9],
+    ]),
+    keyboardPoint.x,
+    keyboardPoint.y,
+  );
   await send(point);
-  await page.waitForFunction(() =>
-    document.getElementById("layout-toggle").classList.contains("holding"),
+  await page.waitForFunction(
+    () =>
+      document.getElementById("layout-toggle").classList.contains("holding"),
+    null,
+    { timeout: 3000 },
   );
   const started = Date.now();
   await page.waitForTimeout(1300);
@@ -104,6 +130,14 @@ try {
   );
   assert.equal(await page.locator("#text").inputValue(), "сохранить");
   await page.screenshot({ path: "test-results/layout-camera-hold.png" });
+  // Returning to a normal letter must resume the same calibrated input path.
+  await send({ x: 0.06 + 0.88 * (1.5 / 13), y: 0.38 + 0.52 / 6 });
+  await page.waitForFunction(
+    () => document.getElementById("gesture").textContent === "Буквы: Й",
+    null,
+    { timeout: 3000 },
+  );
+  assert.equal(await page.locator("#text").inputValue(), "сохранить");
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify(
@@ -116,6 +150,7 @@ try {
           "exit and reentry rearms",
           "control motion produces no letters, flicks or insertion",
           "existing text preserved",
+          "normal letter dwell resumes after leaving the layout key",
         ],
         errors,
       },
