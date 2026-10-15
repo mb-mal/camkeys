@@ -25,7 +25,7 @@ import { WordOverlay } from "./word-overlay.js";
 import { PrefixDecoder, PrefixConsensus } from "./prefix-decoder.js";
 import { removeKnownSample, SAMPLE_CLEANUP_REQUEST } from "./sample-cleanup.js";
 const $ = (id) => document.getElementById(id);
-const layoutHold = new StageControl(2000);
+const layoutHold = new StageControl();
 const unit = [
     [0, 0],
     [1, 0],
@@ -430,7 +430,7 @@ function renderLayout() {
       : "Язык клавиатуры: английский. Переключить на русский";
   button.title =
     label +
-    ". Удерживайте указательный палец на кнопке 2 секунды или нажмите мышью.";
+    `. Удерживайте указательный палец на кнопке ${layoutHold.duration / 1000} секунду или нажмите мышью.`;
   button.setAttribute("aria-label", button.title);
   $("active-lang").textContent = `${state.lang.toUpperCase()} · вручную`;
 }
@@ -952,7 +952,7 @@ function processTrackedHands(hands, time, aspect) {
       $("tracking").textContent =
         control.progress >= 1
           ? "Раскладка переключена · уберите палец с кнопки"
-          : `Переключение раскладки · ${(control.progress * 2).toFixed(1)} / 2 с`;
+          : `Переключение раскладки · ${((control.progress * layoutHold.duration) / 1000).toFixed(1)} / ${layoutHold.duration / 1000} с`;
       draw();
       return;
     }

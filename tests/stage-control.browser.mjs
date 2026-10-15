@@ -95,7 +95,7 @@ try {
     { timeout: 3000 },
   );
   const started = Date.now();
-  await page.waitForTimeout(1300);
+  await page.waitForTimeout(500);
   assert.equal(await lang(), "ru");
   await page.waitForFunction(
     () => document.getElementById("layout-toggle").dataset.layout === "en",
@@ -103,7 +103,7 @@ try {
     { timeout: 2500 },
   );
   const elapsed = Date.now() - started;
-  assert.ok(elapsed >= 1850 && elapsed < 2600, String(elapsed));
+  assert.ok(elapsed >= 850 && elapsed < 1600, String(elapsed));
   await page.waitForTimeout(2300);
   assert.equal(await lang(), "en");
   assert.equal(await page.locator("#text").inputValue(), "сохранить");
@@ -119,7 +119,7 @@ try {
       !document.getElementById("layout-toggle").classList.contains("holding"),
   );
   await send({ ...point, jitter: true });
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(350);
   await send({ x: point.x - 0.15, y: point.y });
   await page.waitForTimeout(1700);
   assert.equal(await lang(), "en");
@@ -149,7 +149,7 @@ try {
       {
         firstHoldMs: elapsed,
         checks: [
-          "2s camera hold with continuous in-contour jitter",
+          "1s camera hold with continuous in-contour jitter",
           "no repeated switch during long hold or tracking dropout",
           "short pass ignored",
           "exit and reentry rearms",

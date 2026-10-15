@@ -2,6 +2,7 @@ import { Dwell } from "./dwell.js";
 import { project } from "./core.js";
 
 // A separate round key in the unused right end of the bottom keyboard row.
+export const LAYOUT_HOLD_MS = 1000;
 export const layoutKey = { x: 0.94, y: 5 / 6, rx: 0.045, ry: 0.12 };
 export function layoutKeyOutline(forward) {
   return Array.from({ length: 49 }, (_, i) => {
@@ -15,7 +16,7 @@ export function layoutKeyOutline(forward) {
 }
 
 export class StageControl {
-  constructor(duration = 2000) {
+  constructor(duration = LAYOUT_HOLD_MS) {
     this.duration = duration;
     // The button contour defines eligibility, rather than distance from the
     // first sample. Movement inside that contour must not restart the hold.

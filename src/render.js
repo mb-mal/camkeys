@@ -1,6 +1,10 @@
 import { keys, project } from "./core.js";
 import { sceneProject, sceneTip } from "./scene.js";
-import { layoutKey, layoutKeyOutline } from "./stage-control.js";
+import {
+  LAYOUT_HOLD_MS,
+  layoutKey,
+  layoutKeyOutline,
+} from "./stage-control.js";
 const colors = ["#97edb5", "#64dac9", "#f0cb77", "#c4bdf0", "#e7a5be"];
 export function drawWorkspace(canvas, scene, state) {
   const ctx = canvas.getContext("2d"),
@@ -84,7 +88,7 @@ export function drawWorkspace(canvas, scene, state) {
   ctx.font = "13px Segoe UI";
   ctx.fillText(state.lang.toUpperCase(), controlX, controlY - 3);
   ctx.font = "8px Segoe UI";
-  ctx.fillText("2 с", controlX, controlY + 9);
+  ctx.fillText(`${LAYOUT_HOLD_MS / 1000} с`, controlX, controlY + 9);
   state.visualCorners.forEach(([x, y]) => {
     ctx.strokeStyle = "#79b992";
     ctx.strokeRect(x * w - 5, y * h - 5, 10, 10);

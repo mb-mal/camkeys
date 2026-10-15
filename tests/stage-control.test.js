@@ -12,7 +12,7 @@ import { InputSession } from "../src/input-session.js";
 const bounds = { x: 0.9, y: 0.9, rx: 0.04, ry: 0.07 };
 const tip = (x = 0.9, id = "hand1-1") => ({ id, x, y: 0.9, pointing: true });
 test("movement anywhere inside the button contour preserves countdown; exit restarts it", () => {
-  const c = new StageControl();
+  const c = new StageControl(2000);
   let previous = 0;
   for (let time = 0; time <= 2000; time += 50) {
     const angle = time / 87;
@@ -67,7 +67,7 @@ test("layout key stays in the calibrated plane and clear of letter hit areas", (
     );
 });
 test("the active digit uses the same dwell engine as letter keys and far observations cannot press", () => {
-  const c = new StageControl();
+  const c = new StageControl(2000);
   assert.ok(c.dwell instanceof Dwell);
   const p = tip(0.9, "hand1-2");
   for (let time = 0; time < 2000; time += 100)
@@ -87,7 +87,7 @@ test("the active digit uses the same dwell engine as letter keys and far observa
     );
 });
 test("camera button uses calibrated keyboard coordinates, holds 2 seconds, and rearms only on exit", () => {
-  const c = new StageControl();
+  const c = new StageControl(2000);
   const update = (time, p = tip()) => c.update({ tips: [p], bounds, time });
   assert.equal(update(0).fired, false);
   for (let t = 100; t < 2000; t += 100) assert.equal(update(t).fired, false);
@@ -104,7 +104,7 @@ test("camera button uses calibrated keyboard coordinates, holds 2 seconds, and r
   assert.equal(update(12700).fired, true);
 });
 test("brief passes, folded fingers, another hand, and gaps cannot activate the button", () => {
-  const c = new StageControl();
+  const c = new StageControl(2000);
   const update = (time, tips, observed = tips) =>
     c.update({ tips, observed, owner: "hand1-1", bounds, time });
   assert.equal(update(0, [tip(0.9, "hand2-1")]).busy, false);
@@ -117,7 +117,7 @@ test("brief passes, folded fingers, another hand, and gaps cannot activate the b
   assert.equal(update(1500, [tip()]).progress, 0);
 });
 test("tracker ID recovery preserves the fired latch and allows rearming after visible exit", () => {
-  const c = new StageControl();
+  const c = new StageControl(2000);
   const update = (time, tips) => c.update({ tips, bounds, time });
   for (let t = 0; t <= 2000; t += 100) update(t, [tip()]);
   update(2700, []);
@@ -147,4 +147,12 @@ test("control pauses insertion and preserves a word; delayed decoder results res
   assert.equal(s.tick(6499, true), false);
   assert.equal(s.tick(6500, true), true);
   assert.equal(inserted.length, 1);
+});
+
+test("default layout switch fires after one second, never earlier", () => {
+  const c = new StageControl();
+  for (let time = 0; time < 1000; time += 50)
+    assert.equal(c.update({ tips: [tip()], bounds, time }).fired, false);
+  assert.equal(c.update({ tips: [tip()], bounds, time: 1000 }).fired, true);
+  assert.equal(c.update({ tips: [tip()], bounds, time: 1050 }).fired, false);
 });
