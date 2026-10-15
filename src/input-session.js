@@ -35,6 +35,8 @@ export class InputSession {
     this.otherCommandHands = new Set();
     this.confirmRequested = false;
     this.recognized = null;
+    this.controlSince = null;
+    this.controlResult = null;
     this.recentCommit = false;
     this.frames = [];
     this.results = [];
@@ -106,6 +108,10 @@ export class InputSession {
     return true;
   }
   commitRecognized(token, automatic = false, time = this.lastTime) {
+    if (this.controlSince !== null) {
+      this.controlResult = { token, automatic };
+      return false;
+    }
     if (
       !token.final ||
       token.session !== this.serial ||
@@ -158,6 +164,7 @@ export class InputSession {
   tick(time, automatic = false) {
     const r = this.recognized;
     if (
+      this.controlSince !== null ||
       !automatic ||
       !r ||
       this.phase !== "ready" ||
@@ -169,6 +176,29 @@ export class InputSession {
     )
       return false;
     return this.confirm(r.word, r.token.session);
+  }
+  suspendControl(time) {
+    if (this.controlSince === null) {
+      this.controlSince = time;
+      this.hold.reset({ keepLatch: true });
+      this.flick.reset();
+      this.leftFlick.reset();
+      this.command = { type: "idle", dx: 0, speed: 0 };
+      this.activity.reset();
+      if (this.owner)
+        this.pause ??= { time, phase: this.phase, point: this.lastPoint };
+    }
+    this.lastTime = time;
+  }
+  resumeControl(time) {
+    if (this.controlSince === null) return;
+    if (this.recognized) this.recognized.since += time - this.controlSince;
+    this.controlSince = null;
+    // Keep the next frame fresh without joining the button's path to a word.
+    this.lastTime = time - 1;
+    const pending = this.controlResult;
+    this.controlResult = null;
+    if (pending) this.commitRecognized(pending.token, pending.automatic, time);
   }
   cancelByGesture(time, observedPoint = this.lastPoint) {
     const undoRecent = this.recentCommit && !this.path.length && !this.letters;

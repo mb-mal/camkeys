@@ -20,10 +20,12 @@ import { acquireCameraStream, waitForVideoFrame } from "./camera.js";
 import { displayCorners } from "./scene.js";
 import { CalibrationController } from "./calibration-ui.js";
 import { InputSession } from "./input-session.js";
+import { StageControl } from "./stage-control.js";
 import { WordOverlay } from "./word-overlay.js";
 import { PrefixDecoder, PrefixConsensus } from "./prefix-decoder.js";
 import { removeKnownSample, SAMPLE_CLEANUP_REQUEST } from "./sample-cleanup.js";
 const $ = (id) => document.getElementById(id);
+const layoutHold = new StageControl(2000);
 const unit = [
     [0, 0],
     [1, 0],
@@ -426,12 +428,15 @@ function renderLayout() {
     state.lang === "ru"
       ? "Язык клавиатуры: русский. Переключить на английский"
       : "Язык клавиатуры: английский. Переключить на русский";
-  button.setAttribute("aria-label", label);
-  button.title = label;
+  button.title =
+    label +
+    ". Удерживайте указательный палец на кнопке 2 секунды или нажмите мышью.";
+  button.setAttribute("aria-label", button.title);
   $("active-lang").textContent = `${state.lang.toUpperCase()} · вручную`;
 }
 function changeLayout(lang) {
   if (lang === state.lang) return;
+  if (layoutHold.id) layoutHold.latched = true;
   const wasCalibrating = state.calibrating;
   if (wasCalibrating) calibration.cancel();
   if (state.source === "demo") stop(true);
@@ -893,6 +898,46 @@ function processTrackedHands(hands, time, aspect) {
     depthGate,
     state.calibrating,
   );
+  if (state.source === "camera") {
+    const stage = $("stage").getBoundingClientRect();
+    const button = $("layout-toggle").getBoundingClientRect();
+    const control = layoutHold.update({
+      tips: result.rawTips,
+      observed: result.activityTips,
+      owner: cameraInput.owner,
+      time,
+      bounds: {
+        x: (button.x + button.width / 2 - stage.x) / stage.width,
+        y: (button.y + button.height / 2 - stage.y) / stage.height,
+        rx: button.width / 2 / stage.width,
+        ry: button.height / 2 / stage.height,
+      },
+    });
+    $("layout-toggle").style.setProperty("--hold", control.progress);
+    $("layout-toggle").classList.toggle("holding", control.busy);
+    if (control.busy) {
+      cameraInput.suspendControl(time);
+      telemetry.record("layout-hold", {
+        time,
+        ...control,
+        finger: layoutHold.id,
+        layout: state.lang,
+      });
+      if (control.fired) {
+        changeLayout(state.lang === "ru" ? "en" : "ru");
+        cameraInput.suspendControl(time);
+      }
+      state.hands = result.hands;
+      state.tips = [];
+      $("tracking").textContent =
+        control.progress >= 1
+          ? "Раскладка переключена · уберите палец с кнопки"
+          : `Переключение раскладки · ${(control.progress * 2).toFixed(1)} / 2 с`;
+      draw();
+      return;
+    }
+    cameraInput.resumeControl(time);
+  }
   telemetry.record("projection", {
     time,
     tips: result.tips,
@@ -1010,6 +1055,9 @@ function resetGesture(resetActivity = true) {
   draw();
 }
 function stop(silent = false) {
+  layoutHold.reset();
+  $("layout-toggle").style.setProperty("--hold", 0);
+  $("layout-toggle").classList.remove("holding");
   cameraGeneration++;
   starting = false;
   cancelAnimationFrame(demoFrame);
@@ -1029,6 +1077,7 @@ function stop(silent = false) {
     state.source === "camera" &&
     cameraInput.entryMode === "swipe"
   ) {
+    cameraInput.resumeControl(performance.now());
     if (!cameraInput.detached) cameraInput.finish("Камера остановлена.");
     renderCandidates(cameraInput.results);
   } else resetGesture();

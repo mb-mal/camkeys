@@ -116,17 +116,18 @@ try {
   for (const width of [320, 768, 1440]) {
     await page.setViewportSize({ width, height: 1100 });
     const toggle = await page.locator("#layout-toggle").boundingBox();
+    const stage = await page.locator("#stage").boundingBox();
     assert.ok(
       Math.abs(toggle.width - toggle.height) < 1,
       "language button is circular",
     );
     assert.ok(
-      Math.abs(width - toggle.x - toggle.width - 20) < 2,
-      "language button stays at the viewport right edge",
+      Math.abs(stage.x + stage.width - toggle.x - toggle.width - 12) < 2,
+      "language button stays at the camera right edge",
     );
     assert.ok(
-      Math.abs(1100 - toggle.y - toggle.height - 20) < 2,
-      "language button stays at the viewport bottom edge",
+      Math.abs(stage.y + stage.height - toggle.y - toggle.height - 12) < 2,
+      "language button stays at the camera bottom edge",
     );
     assert.equal(
       await page.evaluate(
