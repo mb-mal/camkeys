@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="Camkeys — локальный прототип ввода движениями пальцев."
+    />
+    <title>Camkeys · ввод движением</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23172b29'/%3E%3Cpath d='M23 9H12v14h11' fill='none' stroke='%237ae6ba' stroke-width='3'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <header class="top">
+      <a class="brand" href="/" aria-label="Camkeys, главная"
+        ><span class="logo">c<span>k</span></span> camkeys</a
+      ><span class="version">ЛАБОРАТОРИЯ ВВОДА <b>0.1</b></span
+      ><span class="local"><i></i> Всё на этом устройстве</span>
+    </header>
+    <main>
+      <div class="intro">
+        <div>
+          <p class="eyebrow">ОТ ДВИЖЕНИЯ К СЛОВУ</p>
+          <h1>Клавиатура без клавиш.</h1>
+          <p class="lead">
+            Проведите пальцем по буквам. Camkeys соберёт траекторию в слово.
+          </p>
+        </div>
+        <span class="prototype">Исследовательский прототип</span>
+      </div>
+      <div class="workspace">
+        <section class="capture" aria-labelledby="capture-title">
+          <div class="section-top">
+            <h2 id="capture-title">Пространство ввода</h2>
+            <span id="source-badge" class="badge">Без камеры</span>
+          </div>
+          <div class="stage" id="stage">
+            <video
+              id="video"
+              hidden
+              autoplay
+              muted
+              playsinline
+              aria-label="Локальный видеопоток камеры"
+            ></video>
+            <canvas
+              id="overlay"
+              width="960"
+              height="540"
+              aria-label="Виртуальная клавиатура и траектории пальцев"
+            ></canvas>
+            <div
+              id="camera-text"
+              class="camera-text"
+              hidden
+              aria-label="Текущее слово"
+            ></div>
+            <div id="stage-hint" class="stage-hint">
+              <span class="cross">＋</span><strong>Начните с движения</strong
+              ><span
+                >Демонстрация без камеры или траектория мышью.<br />Для живого
+                ввода подключите камеру.</span
+              >
+            </div>
+            <div id="camera-calibration" class="camera-calibration" hidden>
+              <strong id="camera-target"></strong>
+              <span
+                id="camera-readiness"
+                role="status"
+                aria-live="polite"
+              ></span>
+              <progress
+                id="camera-dwell"
+                max="2000"
+                value="0"
+                aria-label="Удержание цели 2 секунды"
+              ></progress>
+              <button id="camera-confirm" class="primary" disabled>
+                Подтвердить позицию
+              </button>
+              <button id="camera-retry" class="primary" hidden>
+                Повторить опорные буквы
+              </button>
+            </div>
+            <div class="stage-bottom">
+              <span id="tracking">Ожидание</span
+              ><span id="gesture">Скольжение + нажатия</span>
+            </div>
+          </div>
+          <div class="controls">
+            <button id="camera" class="primary">Подключить камеру</button
+            ><button id="demo">Демонстрация</button
+            ><button id="stop" disabled>Стоп</button
+            ><button id="calibrate">Калибровка</button>
+            <div
+              class="layout-switch"
+              role="group"
+              aria-label="Раскладка клавиатуры"
+            >
+              <button id="layout-ru" aria-pressed="true">RU</button>
+              <button id="layout-en" aria-pressed="false">EN</button>
+            </div>
+          </div>
+          <section
+            id="wizard"
+            class="wizard"
+            hidden
+            aria-labelledby="wizard-title"
+          >
+            <div class="wizard-top">
+              <h3 id="wizard-title">Калибровка по буквам</h3>
+              <span id="wizard-mode"></span>
+            </div>
+            <div class="wizard-target">
+              <strong id="wizard-letter"></strong><span id="wizard-step"></span>
+            </div>
+            <p id="wizard-instruction"></p>
+            <p id="wizard-sequence" class="small"></p>
+            <p id="wizard-feedback" role="status" aria-live="polite"></p>
+            <p id="wizard-readiness" role="status" aria-live="polite"></p>
+            <label
+              ><input id="wizard-auto-press" type="checkbox" /> Подтверждать
+              сгибанием (экспериментально)</label
+            >
+            <div class="wizard-actions">
+              <button id="wizard-confirm">Подтвердить позицию пальца</button
+              ><button id="wizard-back">Повторить шаг</button
+              ><button id="wizard-restart">Начать заново</button
+              ><button id="wizard-cancel">Отмена</button>
+            </div>
+          </section>
+          <p id="status" role="status" aria-live="polite" class="status">
+            Зажмите мышь на клавиатуре и проведите по буквам. Отпустите для
+            распознавания.
+          </p>
+          <p id="calibration-status" class="small" role="status"></p>
+          <div class="metrics">
+            <div>
+              <span>Кончики пальцев</span
+              ><strong id="finger-count">0 / 10</strong>
+            </div>
+            <div>
+              <span>Трекер / кадр</span><strong id="tracker-ms">—</strong>
+            </div>
+            <div>
+              <span>Подбор слова</span><strong id="decoder-ms">—</strong>
+            </div>
+            <div>
+              <span>Раскладка</span
+              ><strong id="active-lang">RU · вручную</strong>
+            </div>
+          </div>
+          <div class="depth-controls" aria-label="Контроль жестов">
+            <strong>Влево — отменить · вправо — добавить</strong>
+            <label
+              ><input id="auto-camera-insert" type="checkbox" checked />
+              Автоматически вставлять распознанное слово через 1.5 с</label
+            >
+            <p class="small">
+              После распознавания и 1.5 секунды без продолжения слово добавится
+              в строку. Слабое совпадение потребует выбора.
+            </p>
+            <p>
+              Взмах вправо вставляет сразу, влево отменяет текущее слово или
+              последнюю вставку, если новое слово ещё не начато.
+            </p>
+            <p id="flick-motion">· 0.0% кадра · 0.00 шир./с</p>
+            <p id="active-tip">Выбор пальца · окно 5 с</p>
+            <p id="input-dwell" role="status">
+              Удержание над клавишей 0.5 с фиксирует букву один раз.
+            </p>
+            <p id="flick-state" role="status">Наберите слово</p>
+            <p id="flick-result" aria-live="polite">Последняя вставка: —</p>
+            <small
+              >Порог: 12% ширины кадра за 650 мс, скорость ≥ 0.35 шир./с. После
+              вставки — пауза 800 мс от повторов.</small
+            >
+          </div>
+          <div class="depth-controls">
+            <div class="depth-controls-top">
+              <strong>Рабочая глубина</strong
+              ><span id="depth-reference">1× · начальная оценка</span>
+            </div>
+            <label for="depth-limit"
+              >Дальняя граница
+              <output id="depth-limit-value">1.35×</output></label
+            >
+            <input
+              id="depth-limit"
+              type="range"
+              min="0.8"
+              max="2.5"
+              step="0.05"
+              value="1.35"
+            />
+            <div class="depth-actions">
+              <button id="depth-calibrate">Принять текущую глубину за 1×</button
+              ><button id="depth-reset">Сброс</button
+              ><button id="depth-demo">Демо глубины</button>
+            </div>
+            <p id="depth-status" role="status">
+              Камера: дальние ладони и все их пальцы исключаются до ввода. Для
+              настройки покажите ладонь в рабочем положении.
+            </p>
+            <p class="depth-note">
+              Относительная оценка по размеру ладони, без сантиметров. Держите
+              похожий ракурс ладони; после смены камеры повторите калибровку.
+            </p>
+          </div>
+          <details class="settings">
+            <summary>Настройки ввода</summary>
+            <div class="settings-body">
+              <label
+                >Порог сгибания для нажатия
+                <input
+                  id="tap-threshold"
+                  type="range"
+                  min="0.03"
+                  max="0.2"
+                  step="0.01"
+                  value="0.07" /></label
+              ><label
+                ><input id="auto-commit" type="checkbox" /> Автовставка
+                уверенного кандидата</label
+              >
+              <p>
+                Пауза 0,7 с завершает скольжение. Сгибание пальца даёт
+                экспериментальный сигнал нажатия. Глубина не является измерением
+                контакта.
+              </p>
+              <button id="reset-calibration">Сбросить плоскость</button>
+            </div>
+          </details>
+        </section>
+        <aside>
+          <section class="editor" aria-labelledby="editor-title">
+            <div class="section-top">
+              <h2 id="editor-title">Ваш текст</h2>
+              <span class="badge light" id="word-count">0 слов</span>
+            </div>
+            <label class="sr-only" for="text">Текст для ввода и контекста</label
+            ><textarea
+              id="text"
+              placeholder="Здесь появятся ваши слова…"
+              spellcheck="false"
+            ></textarea>
+            <div class="candidate-label">
+              <span>Кандидаты · нажмите для вставки</span
+              ><span id="method">Геометрия</span>
+            </div>
+            <div id="candidates" class="candidates">
+              <p>Проведите по буквам или запустите демо.</p>
+            </div>
+            <div class="editor-actions">
+              <button id="space">Пробел / завершить</button
+              ><button id="undo">Отменить вставку</button
+              ><button id="copy">Копировать</button>
+              <button id="toggle-camera-text" aria-pressed="true">
+                Скрыть в камере
+              </button>
+              <button id="clear-text">Очистить текст</button>
+            </div>
+          </section>
+          <section class="depth" aria-labelledby="depth-title">
+            <div class="section-top">
+              <h2 id="depth-title">Вид плоскости в 3D</h2>
+              <span class="badge light">Наклон 45°</span>
+            </div>
+            <canvas
+              id="scene"
+              width="600"
+              height="220"
+              aria-label="Перспективный вид клавиатуры и пальцев"
+            ></canvas>
+            <p>
+              Наклон отображения 45°. Дальше — выше и меньше; ближе — ниже и
+              больше. Точки проецируются на экранную клавиатуру; руку не нужно
+              держать под 45°.
+            </p>
+          </section>
+          <section class="learn" aria-labelledby="learn-title">
+            <div class="section-top">
+              <h2 id="learn-title">Обучить свой стиль</h2>
+              <span class="badge light" id="sample-count">0 записей</span>
+            </div>
+            <p>
+              Сохраните последнее скольжение с правильным словом. Минимум 3
+              повтора для каждого из двух слов.
+            </p>
+            <div class="record-row">
+              <label class="sr-only" for="label-word">Правильное слово</label
+              ><input
+                id="label-word"
+                placeholder="Например, привет"
+                maxlength="32"
+              /><button id="record">Записать</button>
+            </div>
+            <p class="small" id="last-clip">Пока нет траектории для записи.</p>
+            <div class="learn-actions">
+              <button id="train" class="primary">Обучить сеть</button
+              ><button id="export">Экспорт</button
+              ><label class="file-button"
+                >Импорт<input
+                  id="import"
+                  type="file"
+                  accept="application/json,.json"
+              /></label>
+            </div>
+            <p id="network-status" role="status" class="small">
+              Conv1D не обучена. Сейчас работает словарный фолбэк.
+            </p>
+            <div id="samples" class="sample-list"></div>
+            <button id="clear-learning" class="quiet">
+              Удалить записи и сеть
+            </button>
+          </section>
+        </aside>
+      </div>
+      <footer>
+        <span
+          >Видео не записывается и не отправляется. Траектории сохраняются
+          только по кнопке «Записать».</span
+        ><span>MediaPipe + TensorFlow.js · открытые компоненты</span>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

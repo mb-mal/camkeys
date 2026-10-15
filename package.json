@@ -1,0 +1,37 @@
+{
+  "name": "camkeys",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/*.test.js",
+    "test:browser": "node tests/browser.mjs",
+    "test:projection": "node tests/scene.browser.mjs",
+    "test:camera": "node tests/camera.browser.mjs",
+    "test:gesture": "node tests/gesture.browser.mjs",
+    "test:layout": "node tests/layout.browser.mjs",
+    "test:text-overlay": "node tests/text-overlay.browser.mjs",
+    "test:pose": "node tests/pose.browser.mjs",
+    "test:calibration": "node tests/calibration.browser.mjs",
+    "test:calibration-rendered": "node tests/calibration-rendered.browser.mjs",
+    "test:dwell": "node tests/dwell.browser.mjs",
+    "replay:live": "node scripts/replay-live.mjs",
+    "test:live": "node tests/live-replay.browser.mjs",
+    "assets": "node scripts/assets.mjs",
+    "format": "prettier --write src tests scripts public/tracking.worker.js index.html package.json README.md THIRD_PARTY_NOTICES.md"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "0.10.32",
+    "@tensorflow/tfjs-backend-cpu": "4.22.0",
+    "@tensorflow/tfjs-core": "4.22.0",
+    "@tensorflow/tfjs-layers": "4.22.0"
+  },
+  "devDependencies": {
+    "playwright": "1.58.2",
+    "prettier": "3.6.2",
+    "vite": "7.3.7"
+  }
+}

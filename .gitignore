@@ -1,0 +1,20 @@
+node_modules/
+dist/
+public/vendor/
+public/models/
+test-results/
+.env*
+*.pem
+
+# Local investigation notes and generated diagnostics
+/tasks/
+/SPEC.md
+/scripts/analyze-live.mjs
+playwright-report/
+blob-report/
+coverage/
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
