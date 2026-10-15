@@ -21,3 +21,5 @@
 - [TensorFlow.js layers](https://www.tensorflow.org/js/guide/models_and_layers): Conv1D, последовательная модель, обучение локально.
 
 Сторонние компоненты сохраняют свои лицензии и авторство. Это локальный исследовательский прототип.
+
+Английский словарь: Hermit Dave / FrequencyWords, OpenSubtitles 2018, CC BY-SA 4.0, https://github.com/hermitdave/FrequencyWords/blob/master/content/2018/en/en_50k.txt . Оригинальный файл сохранён без изменений; фильтрация и общий список английских сокращений применяются при загрузке. Атрибуция, описание обработки и SHA-256 находятся в public/dictionaries/README.md.

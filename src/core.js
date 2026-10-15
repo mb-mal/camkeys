@@ -22,10 +22,15 @@ export function nearestKey(p, lang) {
 }
 export function wordPath(word, lang) {
   const map = new Map(keys(lang).map((k) => [k.letter, k]));
-  return [...word.toLowerCase()].map((c) => {
-    if (!map.has(c)) throw new Error("Слово содержит символ вне раскладки");
-    return { ...map.get(c), z: 0 };
-  });
+  const spelling = word.toLowerCase();
+  if (lang === "en" && !/^[a-z]+(?:'[a-z]+)*$/.test(spelling))
+    throw new Error("Слово содержит символ вне раскладки");
+  return [...(lang === "en" ? spelling.replaceAll("'", "") : spelling)].map(
+    (c) => {
+      if (!map.has(c)) throw new Error("Слово содержит символ вне раскладки");
+      return { ...map.get(c), z: 0 };
+    },
+  );
 }
 function solve(matrix) {
   const n = matrix.length;
@@ -151,7 +156,10 @@ export function rankWords(
       let error;
       if (tapStrings) {
         const raw = tapStrings[lang] || "";
-        error = editDistance(raw, word) / Math.max(raw.length, word.length, 1);
+        const spelling = lang === "en" ? word.replaceAll("'", "") : word;
+        error =
+          editDistance(raw, spelling) /
+          Math.max(raw.length, spelling.length, 1);
       } else {
         const cacheKey = lang + ":" + word;
         if (!templateCache.has(cacheKey))

@@ -95,14 +95,6 @@
             ><button id="demo">Демонстрация</button
             ><button id="stop" disabled>Стоп</button
             ><button id="calibrate">Калибровка</button>
-            <div
-              class="layout-switch"
-              role="group"
-              aria-label="Раскладка клавиатуры"
-            >
-              <button id="layout-ru" aria-pressed="true">RU</button>
-              <button id="layout-en" aria-pressed="false">EN</button>
-            </div>
           </div>
           <section
             id="wizard"
@@ -326,6 +318,16 @@
         ><span>MediaPipe + TensorFlow.js · открытые компоненты</span>
       </footer>
     </main>
+    <button
+      id="layout-toggle"
+      class="layout-toggle"
+      type="button"
+      data-layout="ru"
+      aria-label="Язык клавиатуры: русский. Переключить на английский"
+      title="Язык клавиатуры: русский. Переключить на английский"
+    >
+      RU
+    </button>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

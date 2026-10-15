@@ -221,7 +221,7 @@ function initializeDictionary() {
   const label = document.createElement("p");
   label.id = "dictionary-status";
   label.className = "small";
-  label.textContent = "Загрузка русского словаря…";
+  label.textContent = "Загрузка словарей RU / EN…";
   $("candidates").before(label);
   dictionaryWorker = new Worker(
     new URL("./decoder.worker.js", import.meta.url),
@@ -243,7 +243,13 @@ function initializeDictionary() {
     clearTimeout(dictionaryTimer);
     if (data.type === "ready") {
       dictionaryReady = true;
-      label.textContent = `Русский словарь: ${data.count.toLocaleString("ru")} слов · локально`;
+      label.textContent =
+        ["ru", "en"]
+          .map(
+            (lang) =>
+              `${lang.toUpperCase()}: ${data.counts[lang] === null ? `резервный словарь (${data.errors[lang]})` : data.counts[lang].toLocaleString("ru") + " слов"}`,
+          )
+          .join(" · ") + " · локально";
     } else if (data.type === "preview") {
       dictionaryBusy = false;
       applyPrefix(data.token, data.preview);
@@ -252,6 +258,16 @@ function initializeDictionary() {
       return;
     } else {
       dictionaryBusy = false;
+      if (data.token.source === "pointer") {
+        if (
+          state.source === "pointer" &&
+          data.token.version === revision &&
+          data.token.layout === state.lang
+        )
+          presentPointerResults(data.results, true);
+        dispatchDictionary();
+        return;
+      }
       const accepted = cameraInput.accept(data.token, data.results);
       telemetry.record("dictionary-result", { ...data, accepted });
       if (accepted) {
@@ -403,11 +419,15 @@ function languages() {
   return [state.lang];
 }
 function renderLayout() {
-  for (const lang of ["ru", "en"])
-    $("layout-" + lang).setAttribute(
-      "aria-pressed",
-      String(state.lang === lang),
-    );
+  const button = $("layout-toggle");
+  button.textContent = state.lang.toUpperCase();
+  button.dataset.layout = state.lang;
+  const label =
+    state.lang === "ru"
+      ? "Язык клавиатуры: русский. Переключить на английский"
+      : "Язык клавиатуры: английский. Переключить на русский";
+  button.setAttribute("aria-label", label);
+  button.title = label;
   $("active-lang").textContent = `${state.lang.toUpperCase()} · вручную`;
 }
 function changeLayout(lang) {
@@ -550,6 +570,23 @@ async function decode(path, final = false, taps = null) {
   }
   if (token !== revision) return;
   $("decoder-ms").textContent = `${(performance.now() - start).toFixed(1)} мс`;
+  if (final && dictionaryReady && state.source === "pointer") {
+    renderCandidates(result);
+    dictionaryPending = {
+      source: "pointer",
+      version: token,
+      session: pointerPreviewSession,
+      layout: state.lang,
+      path,
+      letters: taps?.[state.lang] || "",
+      final: true,
+    };
+    dispatchDictionary();
+    return;
+  }
+  presentPointerResults(result, final);
+}
+function presentPointerResults(result, final) {
   renderCandidates(result);
   if (final && result[0]) wordOverlay.show(result[0].word, "word");
   if (
@@ -1417,8 +1454,8 @@ $("reset-calibration").onclick = () => {
   resetGesture();
   status("Стандартная плоскость восстановлена.");
 };
-for (const lang of ["ru", "en"])
-  $("layout-" + lang).onclick = () => changeLayout(lang);
+$("layout-toggle").onclick = () =>
+  changeLayout(state.lang === "ru" ? "en" : "ru");
 $("text").oninput = textChanged;
 $("toggle-camera-text").onclick = () => {
   overlayVisible = !overlayVisible;

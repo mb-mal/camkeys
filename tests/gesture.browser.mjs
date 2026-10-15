@@ -70,7 +70,7 @@ const send = (action) =>
 const checks = [];
 try {
   await page.goto("http://127.0.0.1:5173/");
-  await page.locator("#layout-en").click();
+  await page.locator("#layout-toggle").click();
   await page.locator("#camera").click();
   await page.waitForFunction(
     () =>

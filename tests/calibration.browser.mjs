@@ -75,7 +75,7 @@ try {
   checks.push(
     "Pointer completes ten RU presses including repeats; camera geometry untouched",
   );
-  await page.locator("#layout-en").click();
+  await page.locator("#layout-toggle").click();
   await page.locator("#calibrate").click();
   for (const letter of calibrationLetters.en) {
     await pointerTarget(letter, false, "en");
@@ -87,7 +87,7 @@ try {
   );
   assert.equal(await saved(), oldCorners);
   checks.push("EN letter targets and repeats complete in browser");
-  await page.locator("#layout-ru").click();
+  await page.locator("#layout-toggle").click();
   await page.locator("#calibrate").click();
   await pointerTarget("й");
   await page.locator("#wizard-cancel").click();

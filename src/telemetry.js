@@ -73,12 +73,14 @@ export function mountTelemetry(metadata) {
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-  setInterval(() => {
+  const refresh = () => {
     $("trace-status").textContent =
       `${telemetry.reason} · ${telemetry.rows.length} / ${telemetry.limit} событий`;
     $("trace-start").disabled =
       telemetry.active || telemetry.rows.length >= telemetry.limit;
-  }, 500);
+  };
+  refresh();
+  setInterval(refresh, 500);
   window.addEventListener("error", (e) =>
     telemetry.record("error", { message: e.message }),
   );

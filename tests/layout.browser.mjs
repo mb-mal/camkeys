@@ -42,10 +42,16 @@ try {
   const savedClips = await page.evaluate(() =>
     localStorage.getItem("camkeys-clips"),
   );
-  await page.locator("#layout-en").click();
+  await page.locator("#layout-toggle").click();
   assert.equal(
-    await page.locator("#layout-en").getAttribute("aria-pressed"),
-    "true",
+    await page.locator("#layout-toggle").getAttribute("data-layout"),
+    "en",
+  );
+  await page.locator("#layout-toggle").hover();
+  await page.waitForFunction(
+    () =>
+      getComputedStyle(document.getElementById("layout-toggle"))
+        .backgroundColor === "rgb(27, 72, 54)",
   );
   await page.locator("#overlay").scrollIntoViewIfNeeded();
   const box = await page.locator("#overlay").boundingBox();
@@ -64,20 +70,20 @@ try {
   const langs = await page.locator("#candidates small").allTextContents();
   assert.ok(langs.length > 0 && langs.every((l) => l === "EN"));
   assert.equal(
-    await page.locator("#layout-en").getAttribute("aria-pressed"),
-    "true",
+    await page.locator("#layout-toggle").getAttribute("data-layout"),
+    "en",
   );
   checks.push(
     "RU-like path in manual EN stays EN; all candidates use selected language",
   );
-  await page.locator("summary").click();
+  await page.getByText("Настройки ввода", { exact: true }).click();
   await page.locator("#auto-commit").check();
   await page.locator("#overlay").scrollIntoViewIfNeeded();
   const b = await page.locator("#overlay").boundingBox();
   await page.mouse.move(b.x + path[0].x * b.width, b.y + path[0].y * b.height);
   await page.mouse.down();
   await page.mouse.move(b.x + path[3].x * b.width, b.y + path[3].y * b.height);
-  await page.locator("#layout-ru").focus();
+  await page.locator("#layout-toggle").focus();
   await page.keyboard.press("Space");
   await page.mouse.up();
   await page.waitForTimeout(350);
@@ -88,7 +94,7 @@ try {
   );
   await page.locator("#calibrate").click();
   assert.match(await page.locator("#wizard-instruction").textContent(), /Й/);
-  await page.locator("#layout-en").click();
+  await page.locator("#layout-toggle").click();
   assert.equal(await page.locator("#wizard").isVisible(), false);
   assert.match(await page.locator("#status").textContent(), /Мастер отменён/);
   await page.locator("#calibrate").click();
@@ -96,8 +102,8 @@ try {
   await page.locator("#wizard-cancel").click();
   await page.reload();
   assert.equal(
-    await page.locator("#layout-en").getAttribute("aria-pressed"),
-    "true",
+    await page.locator("#layout-toggle").getAttribute("data-layout"),
+    "en",
   );
   assert.equal(await page.locator("#text").inputValue(), "сохранённый текст");
   assert.equal(
@@ -107,14 +113,21 @@ try {
   checks.push(
     "Manual layout persists; wizard language follows it and cancellation preserves data",
   );
-  const stage = await page.locator("#overlay").boundingBox(),
-    switcher = await page.locator(".layout-switch").boundingBox();
-  assert.ok(
-    switcher.y >= stage.y + stage.height &&
-      switcher.x + switcher.width <= stage.x + stage.width + 1,
-  );
   for (const width of [320, 768, 1440]) {
     await page.setViewportSize({ width, height: 1100 });
+    const toggle = await page.locator("#layout-toggle").boundingBox();
+    assert.ok(
+      Math.abs(toggle.width - toggle.height) < 1,
+      "language button is circular",
+    );
+    assert.ok(
+      Math.abs(width - toggle.x - toggle.width - 20) < 2,
+      "language button stays at the viewport right edge",
+    );
+    assert.ok(
+      Math.abs(1100 - toggle.y - toggle.height - 20) < 2,
+      "language button stays at the viewport bottom edge",
+    );
     assert.equal(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

@@ -44,7 +44,7 @@ page.on("request", (r) => {
 const check = [];
 try {
   await page.goto("http://127.0.0.1:5173/");
-  await page.locator("#layout-en").click();
+  await page.locator("#layout-toggle").click();
   await page.getByRole("button", { name: "Демонстрация", exact: true }).click();
   await page.waitForFunction(
     () =>
@@ -152,7 +152,7 @@ try {
   );
   assert.equal(await page.locator("#sample-count").textContent(), "6 записей");
   check.push("Malformed import rejected without replacing records");
-  await page.locator("summary").click();
+  await page.getByText("Настройки ввода", { exact: true }).click();
   await page.locator("#auto-commit").check();
   const beforeDepth = await page.locator("#text").inputValue();
   await page.locator("#depth-demo").click();

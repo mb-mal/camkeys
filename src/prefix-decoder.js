@@ -96,8 +96,14 @@ export class PrefixDecoder {
     for (let rank = 0; rank < words.length; rank++) {
       const word = words[rank];
       let parent = null;
-      if (![...word].every((c) => keyboard.has(c))) continue;
+      if (
+        ![...word].every(
+          (c) => keyboard.has(c) || (layout === "en" && c === "'"),
+        )
+      )
+        continue;
       for (let i = 1; i <= word.length; i++) {
+        if (word[i - 1] === "'") continue;
         const text = word.slice(0, i),
           point = keyboard.get(word[i - 1]);
         let node = prefixes.get(text);

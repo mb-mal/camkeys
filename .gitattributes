@@ -1,2 +1,3 @@
 * text=auto eol=lf
 public/dictionaries/ru_50k.txt -text
+public/dictionaries/en_50k.txt -text

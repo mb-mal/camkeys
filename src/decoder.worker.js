@@ -1,18 +1,35 @@
 import { rankToken, vocabulary } from "./core.js";
 import { PrefixDecoder } from "./prefix-decoder.js";
 import { installRussianDictionary } from "./russian-dictionary.js";
+import { installEnglishDictionary } from "./english-dictionary.js";
 let ready = false;
 const prefixes = new Map();
 self.onmessage = async ({ data }) => {
   try {
     if (data.type === "init") {
-      const response = await fetch("/dictionaries/ru_50k.txt");
-      if (!response.ok) throw new Error(`Словарь: HTTP ${response.status}`);
-      const count = installRussianDictionary(await response.text());
+      const counts = {},
+        errors = {};
+      await Promise.all(
+        [
+          ["ru", installRussianDictionary],
+          ["en", installEnglishDictionary],
+        ].map(async ([layout, install]) => {
+          try {
+            const response = await fetch(`/dictionaries/${layout}_50k.txt`, {
+              signal: AbortSignal.timeout(6000),
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            counts[layout] = install(await response.text());
+          } catch (error) {
+            counts[layout] = null;
+            errors[layout] = error.message;
+          }
+        }),
+      );
       for (const layout of ["ru", "en"])
         prefixes.set(layout, new PrefixDecoder(vocabulary[layout], layout));
       ready = true;
-      postMessage({ type: "ready", count });
+      postMessage({ type: "ready", count: counts.ru, counts, errors });
       return;
     }
     if (!ready) throw new Error("Словарь ещё не загружен");
