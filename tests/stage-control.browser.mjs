@@ -34,10 +34,11 @@ await page.route("**/tracking.worker.js", (r) =>
     contentType: "application/javascript",
     body: `
  const straight=${pointStraight.toString()}, base=${JSON.stringify(base)};
- let point={x:.5,y:.5},lost=false;
- new BroadcastChannel('stage-button').onmessage=({data})=>{if('lost'in data)lost=data.lost;if('x'in data)point=data;};
+ let point={x:.5,y:.5},lost=false,jitter=false;
+ new BroadcastChannel('stage-button').onmessage=({data})=>{if('lost'in data)lost=data.lost;if('jitter'in data)jitter=data.jitter;if('x'in data)point=data;};
  onmessage=({data})=>{if(data.type==='init'){postMessage({type:'ready'});return;}
- const hand=base.map(q=>({...q,x:q.x+point.x-.03-base[5].x,y:point.y-.08-(q.y-base[5].y)}));straight(hand,1,{...point,z:-.1});data.bitmap.close();
+ const p={x:point.x+(jitter?.024*Math.sin(data.time/87):0),y:point.y+(jitter?.03*Math.cos(data.time/87):0)};
+ const hand=base.map(q=>({...q,x:q.x+p.x-.03-base[5].x,y:p.y-.08-(q.y-base[5].y)}));straight(hand,1,{...p,z:-.1});data.bitmap.close();
  setTimeout(()=>postMessage({type:'result',time:data.time,inferenceMs:0,result:{landmarks:lost?[]:[hand.map(q=>({...q,x:1-q.x}))]}}),40);};
 `,
   }),
@@ -86,7 +87,7 @@ try {
     keyboardPoint.x,
     keyboardPoint.y,
   );
-  await send(point);
+  await send({ ...point, jitter: true });
   await page.waitForFunction(
     () =>
       document.getElementById("layout-toggle").classList.contains("holding"),
@@ -117,12 +118,12 @@ try {
     () =>
       !document.getElementById("layout-toggle").classList.contains("holding"),
   );
-  await send(point);
+  await send({ ...point, jitter: true });
   await page.waitForTimeout(800);
   await send({ x: point.x - 0.15, y: point.y });
   await page.waitForTimeout(1700);
   assert.equal(await lang(), "en");
-  await send(point);
+  await send({ ...point, jitter: true });
   await page.waitForFunction(
     () => document.getElementById("layout-toggle").dataset.layout === "ru",
     null,
@@ -131,7 +132,11 @@ try {
   assert.equal(await page.locator("#text").inputValue(), "сохранить");
   await page.screenshot({ path: "test-results/layout-camera-hold.png" });
   // Returning to a normal letter must resume the same calibrated input path.
-  await send({ x: 0.06 + 0.88 * (1.5 / 13), y: 0.38 + 0.52 / 6 });
+  await send({
+    x: 0.06 + 0.88 * (1.5 / 13),
+    y: 0.38 + 0.52 / 6,
+    jitter: false,
+  });
   await page.waitForFunction(
     () => document.getElementById("gesture").textContent === "Буквы: Й",
     null,
@@ -144,7 +149,7 @@ try {
       {
         firstHoldMs: elapsed,
         checks: [
-          "2s camera hold",
+          "2s camera hold with continuous in-contour jitter",
           "no repeated switch during long hold or tracking dropout",
           "short pass ignored",
           "exit and reentry rearms",

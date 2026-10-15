@@ -11,6 +11,28 @@ import { displayCorners } from "../src/scene.js";
 import { InputSession } from "../src/input-session.js";
 const bounds = { x: 0.9, y: 0.9, rx: 0.04, ry: 0.07 };
 const tip = (x = 0.9, id = "hand1-1") => ({ id, x, y: 0.9, pointing: true });
+test("movement anywhere inside the button contour preserves countdown; exit restarts it", () => {
+  const c = new StageControl();
+  let previous = 0;
+  for (let time = 0; time <= 2000; time += 50) {
+    const angle = time / 87;
+    const p = {
+      ...tip(),
+      x: bounds.x + 0.95 * bounds.rx * Math.cos(angle),
+      y: bounds.y + 0.95 * bounds.ry * Math.sin(angle),
+    };
+    const result = c.update({ tips: [p], bounds, time });
+    assert.equal(result.progress, time / 2000);
+    assert.ok(result.progress >= previous);
+    assert.equal(result.fired, time === 2000);
+    previous = result.progress;
+  }
+  c.update({ tips: [tip(bounds.x + bounds.rx + 0.001)], bounds, time: 2050 });
+  assert.equal(c.update({ tips: [tip()], bounds, time: 2100 }).progress, 0);
+  for (let time = 2150; time < 4100; time += 50)
+    assert.equal(c.update({ tips: [tip()], bounds, time }).fired, false);
+  assert.equal(c.update({ tips: [tip()], bounds, time: 4100 }).fired, true);
+});
 test("layout key stays in the calibrated plane and clear of letter hit areas", () => {
   const unit = [
     [0, 0],

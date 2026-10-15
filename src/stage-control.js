@@ -17,7 +17,9 @@ export function layoutKeyOutline(forward) {
 export class StageControl {
   constructor(duration = 2000) {
     this.duration = duration;
-    this.dwell = new Dwell(duration);
+    // The button contour defines eligibility, rather than distance from the
+    // first sample. Movement inside that contour must not restart the hold.
+    this.dwell = new Dwell(duration, { radius: Infinity });
     this.reset();
   }
   reset() {
